@@ -1,3 +1,5 @@
+# Build scripts are denied on purpose: these packages ship prebuilt binaries
+# (or optional platform packages), so no install-time script is needed.
 allowBuilds:
   esbuild: false
   sharp: false

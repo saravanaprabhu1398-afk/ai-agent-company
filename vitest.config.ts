@@ -4,11 +4,12 @@ import { defineConfig } from "vitest/config";
 const alias = { "@": fileURLToPath(new URL("./src", import.meta.url)) };
 
 export default defineConfig({
+  resolve: { alias },
   test: {
     passWithNoTests: true,
     projects: [
       {
-        resolve: { alias },
+        extends: true,
         test: {
           name: "unit",
           include: ["tests/unit/**/*.test.ts"],
@@ -17,7 +18,7 @@ export default defineConfig({
       },
       {
         // Component tests (*.test.tsx) run in jsdom; still part of the "unit" level.
-        resolve: { alias },
+        extends: true,
         test: {
           name: "unit-dom",
           include: ["tests/unit/**/*.test.tsx"],
@@ -26,7 +27,7 @@ export default defineConfig({
         },
       },
       {
-        resolve: { alias },
+        extends: true,
         test: {
           name: "integration",
           include: ["tests/integration/**/*.test.ts"],
