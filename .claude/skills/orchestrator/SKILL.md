@@ -34,6 +34,10 @@ Follow `CLAUDE.md` and `docs/WORKFLOW.md`. You coordinate; you don't write produ
 5. **Review**: for each PR, delegate to `code-reviewer`, `qa-engineer`, and `security-engineer` (when the PR touches auth, input handling, dependencies or config), in parallel. If changes are requested, send it back to the developer. Max 3 cycles, then label `needs-ceo`. When everything is approved, STOP for Gate 3: list the PRs ready to merge.
 6. **Release**: after the CEO merges, delegate to `devops-engineer` (staging deploy), then `tech-writer` (changelog/docs). STOP for Gate 4 before production. After prod: `sre` checks health, and `product-manager` plans the next sprint.
 
+## Keep the HQ office live
+At the end of every phase, and whenever you stop at a gate, run the `hq-sync` skill so the
+Agent Company HQ page shows the latest GitHub state.
+
 ## Gate rules
 - At a gate, STOP and give the CEO: a summary, links (files, issues, PRs), risks, and the exact approval phrase (e.g. "approve gate 1").
 - Only move past a gate when the CEO approves in chat. When they approve Gate 1 or 2, mark the doc's Status line as Approved.

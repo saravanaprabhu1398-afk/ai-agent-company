@@ -1,0 +1,734 @@
+<title>Agent Company HQ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a top-down factory floor plan. Rooms are departments, robots sit at desks, drones carry tickets between them. */
+:root{
+  color-scheme: dark;
+  --floor:#141c25; --room:#1c2733; --room-line:#2c3a49; --tile:rgba(255,255,255,.035);
+  --plate:#0d131a; --ink:#e6ecf1; --ink-dim:#8fa0b1; --desk:#3a4756; --desk-top:#4b5a6b;
+  --visor:#0b141d; --eye:#7fe3ff; --led-off:#46535f;
+  --hazard:#f2b632; --ok:#5fd18a; --bad:#ef6b5b;
+  --en-ceo:#c9d3dc; --en-tower:#f2d14b; --en-product:#e9a23b; --en-design:#6aa8dd;
+  --en-eng:#e4683b; --en-quality:#86c46a; --en-ops:#b28ae2; --en-docs:#d8c8a0;
+  --display:"Chakra Petch", "Rajdhani", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+*{box-sizing:border-box}
+html,body{background:var(--floor);color:var(--ink)}
+body{font-family:var(--body);font-size:14px;line-height:1.45}
+.wrap{max-width:1320px;margin:0 auto;padding-inline:16px;padding-block:20px 40px;display:flex;flex-direction:column;gap:14px}
+
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.brand h1{font-family:var(--display);font-weight:700;font-size:clamp(24px,3.4vw,34px);letter-spacing:.02em;margin:0;line-height:1.05;text-wrap:balance}
+.brand h1 span{color:var(--hazard)}
+.brand p{margin:4px 0 0;color:var(--ink-dim);font-size:13px}
+.brand a{color:var(--ink-dim)}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn,.seg button{font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;background:var(--plate);color:var(--ink);border:1px solid var(--room-line);border-radius:4px;padding:7px 12px;cursor:pointer}
+.btn:hover,.seg button:hover{border-color:var(--ink-dim)}
+.btn:focus-visible,.seg button:focus-visible,.desk:focus-visible,.toggle input:focus-visible{outline:2px solid var(--eye);outline-offset:2px}
+.seg{display:flex}
+.seg button{border-radius:0;margin-left:-1px}
+.seg button:first-child{border-radius:4px 0 0 4px;margin-left:0}
+.seg button:last-child{border-radius:0 4px 4px 0}
+.seg button[aria-pressed="true"]{background:var(--hazard);color:var(--plate);border-color:var(--hazard)}
+.toggle{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-dim)}
+
+.strip{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--plate);border:1px solid var(--room-line);border-radius:4px;padding:6px 10px;display:flex;gap:8px;align-items:baseline}
+.chip b{font-family:var(--display);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);font-weight:600}
+.chip span{font-family:var(--mono);font-size:13px;font-variant-numeric:tabular-nums}
+.chip.phase span{color:var(--hazard)}
+
+/* Floor plan */
+.floor{position:relative;display:grid;gap:10px;grid-template-columns:repeat(4,minmax(0,1fr));
+  grid-template-areas:"ceo product design design" "tower eng eng ops" "quality quality quality docs";
+  padding:10px;border:2px solid var(--room-line);border-radius:6px;
+  background:repeating-linear-gradient(135deg,var(--floor) 0 14px,#18212b 14px 28px)}
+.room{position:relative;min-width:0;background-color:var(--room);border:1px solid var(--room-line);border-radius:4px;padding:8px 8px 10px;display:flex;flex-direction:column;gap:6px;
+  background-image:linear-gradient(var(--tile) 1px,transparent 1px),linear-gradient(90deg,var(--tile) 1px,transparent 1px);background-size:22px 22px}
+.sign{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sign h2{margin:0;font-family:var(--display);font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;background:var(--plate);border:1px solid var(--room-line);padding:3px 8px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sign small{font-family:var(--mono);font-size:10px;color:var(--ink-dim);white-space:nowrap}
+.desks{flex:1;display:flex;flex-wrap:wrap;justify-content:space-around;align-items:flex-end;gap:6px 4px}
+
+.desk{width:122px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;border-radius:6px;padding:4px 2px;border:1px solid transparent}
+.desk.selected{border-color:var(--room-line);background:rgba(0,0,0,.18)}
+.bubble{width:118px;min-height:36px;font-family:var(--mono);font-size:10.5px;line-height:1.3;background:var(--plate);color:var(--ink);border:1px solid var(--room-line);border-radius:6px;padding:4px 6px;position:relative;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;transition:border-color .3s}
+.desk[data-state="working"] .bubble{border-color:var(--eye)}
+.desk[data-state="waiting"] .bubble{border-color:var(--hazard)}
+.desk[data-state="done"] .bubble{border-color:var(--ok)}
+.station{position:relative;width:108px;height:86px}
+.station svg.bot{position:absolute;left:10px;top:0;width:66px;height:74px;overflow:visible}
+.table{position:absolute;left:0;right:0;bottom:0;height:24px;background:var(--desk);border-top:5px solid var(--desk-top);border-radius:3px;z-index:2}
+.monitor{position:absolute;right:3px;bottom:20px;width:30px;height:24px;background:var(--plate);border:2px solid var(--desk-top);border-radius:3px;z-index:3;padding:3px;display:flex;flex-direction:column;gap:2px}
+.monitor i{display:block;height:2px;background:var(--led-off);border-radius:1px;width:60%}
+.monitor i:nth-child(2){width:85%}.monitor i:nth-child(3){width:45%}
+.desk[data-state="working"] .monitor i{background:var(--eye);animation:code 1.1s steps(4) infinite}
+.desk[data-state="working"] .monitor i:nth-child(2){animation-delay:.3s}
+.desk[data-state="working"] .monitor i:nth-child(3){animation-delay:.6s}
+@keyframes code{0%{width:20%}50%{width:90%}100%{width:50%}}
+.nameplate{font-family:var(--display);font-size:12px;font-weight:600;letter-spacing:.04em;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.nameplate .dot{width:7px;height:7px;border-radius:50%;background:var(--led-off)}
+.desk[data-state="working"] .dot{background:var(--eye)}
+.desk[data-state="waiting"] .dot{background:var(--hazard)}
+.desk[data-state="done"] .dot{background:var(--ok)}
+.role{font-size:10.5px;color:var(--ink-dim);margin-top:-4px;text-align:center}
+.model{font-family:var(--mono);font-size:9.5px;color:var(--ink-dim);border:1px solid var(--room-line);border-radius:3px;padding:0 4px}
+
+/* Robot parts */
+.bot .shell{fill:var(--enamel)}
+.bot .shade{fill:var(--enamel);filter:brightness(.72)}
+.bot .visor{fill:var(--visor)}
+.bot .eye{fill:var(--eye);transform-box:fill-box;transform-origin:center;animation:blink 4.6s var(--d,0s) infinite}
+.bot .led{fill:var(--led-off)}
+.bot .panel{fill:var(--visor)}
+.bot .px{fill:var(--led-off)}
+.bot .arm{transform-box:fill-box;transform-origin:50% 8%}
+.bot .rig{animation:bob 3.2s var(--d,0s) ease-in-out infinite}
+.desk[data-state="working"] .bot .led{fill:var(--eye);animation:pulse .7s infinite alternate}
+.desk[data-state="waiting"] .bot .led{fill:var(--hazard);animation:pulse .5s infinite alternate}
+.desk[data-state="done"] .bot .led{fill:var(--ok)}
+.desk[data-state="working"] .bot .px{fill:var(--eye)}
+.desk[data-state="working"] .bot .arm.l{animation:type .26s infinite alternate}
+.desk[data-state="working"] .bot .arm.r{animation:type .26s .13s infinite alternate}
+.desk[data-state="waiting"] .bot .eye{fill:var(--hazard)}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.12)}}
+@keyframes pulse{from{opacity:.35}to{opacity:1}}
+@keyframes type{from{transform:rotate(-7deg)}to{transform:rotate(9deg) translateY(1px)}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(1.5px)}}
+
+/* Control tower radar */
+.room.tower .radar{position:absolute;right:10px;top:34px;width:44px;height:44px;border-radius:50%;border:1px solid var(--room-line);
+  background:conic-gradient(from 0deg,rgba(242,209,75,.35),transparent 25%);animation:spin 3s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* CEO gates */
+.gates{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.lamps{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.lamp{display:flex;flex-direction:column;align-items:center;gap:2px;font-family:var(--mono);font-size:9.5px;color:var(--ink-dim)}
+.lamp i{width:14px;height:14px;border-radius:50%;background:var(--led-off);border:2px solid var(--plate)}
+.lamp[data-s="wait"] i{background:var(--hazard);animation:pulse .5s infinite alternate;box-shadow:0 0 10px var(--hazard)}
+.lamp[data-s="ok"] i{background:var(--ok)}
+#approveBtn{font-size:11.5px;padding:7px 8px}
+#approveBtn:not(:disabled){background:var(--hazard);color:var(--plate);border-color:var(--hazard)}
+#approveBtn:disabled{opacity:.5;cursor:default}
+
+/* Ticket drones */
+.drone{position:absolute;z-index:20;left:0;top:0;transform:translate(-50%,-50%);pointer-events:none;transition-property:left,top;transition-timing-function:cubic-bezier(.55,.05,.35,1);display:flex;flex-direction:column;align-items:center}
+.drone svg{width:38px;height:16px}
+.drone .rotor{fill:var(--ink-dim);transform-box:fill-box;transform-origin:center;animation:rotor .12s linear infinite alternate}
+.drone .frame{fill:var(--ink)}
+.drone .tag{font-family:var(--mono);font-size:10px;background:var(--hazard);color:var(--plate);padding:1px 5px;border-radius:2px;margin-top:-2px;white-space:nowrap;font-weight:500}
+@keyframes rotor{from{transform:scaleX(1)}to{transform:scaleX(.3)}}
+
+/* Lower panels */
+.lower{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px}
+.panel-box{background:var(--room);border:1px solid var(--room-line);border-radius:4px;padding:12px;min-width:0}
+.panel-box h3{margin:0 0 8px;font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+#log{list-style:none;margin:0;padding:0;max-height:300px;overflow:auto;font-family:var(--mono);font-size:12px;display:flex;flex-direction:column}
+#log li{display:grid;grid-template-columns:44px 84px minmax(0,1fr);gap:8px;padding:5px 0;border-bottom:1px dashed var(--room-line)}
+#log time{color:var(--ink-dim);font-variant-numeric:tabular-nums}
+#log .who{color:var(--c,var(--ink));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#log li.gate .msg{color:var(--hazard)}
+.detail{display:flex;gap:14px;align-items:flex-start}
+.detail .big{width:96px;flex:none}
+.detail .big svg{width:96px;height:108px;overflow:visible}
+.detail dl{margin:0;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;font-size:13px;min-width:0}
+.detail dt{color:var(--ink-dim);font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-family:var(--display);padding-top:2px}
+.detail dd{margin:0;font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
+.detail h4{margin:0 0 6px;font-family:var(--display);font-size:20px;font-weight:700}
+.note{color:var(--ink-dim);font-size:12px;margin:0}
+
+body.paused *{animation-play-state:paused!important}
+.banner{background:var(--plate);border:1px solid var(--hazard);border-radius:4px;padding:10px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.banner code{font-family:var(--mono);font-size:12px;background:var(--room);padding:1px 5px;border-radius:3px}
+.banner .btn{padding:5px 10px;font-size:12px}
+.chip.stale span{color:var(--hazard)}
+#gateLink{font-family:var(--mono);font-size:11px;color:var(--ink-dim);text-align:center;overflow-wrap:anywhere}
+#log a{color:inherit}
+
+@media (max-width:900px){
+  .floor{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:"ceo tower" "product product" "design design" "eng eng" "quality quality" "ops docs"}
+  .lower{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:520px){
+  .floor{grid-template-columns:minmax(0,1fr);grid-template-areas:"ceo" "tower" "product" "design" "eng" "quality" "ops" "docs"}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important}
+  .drone{transition:none!important}
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Agent Company <span>HQ</span></h1>
+      <p>13 agents, 1 CEO · <a id="repoLink" href="https://github.com/saravanaprabhu1398-afk/ai-agent-company" target="_blank" rel="noopener">ai-agent-company</a> · <span id="modeNote">connecting to GitHub data…</span></p>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Data source">
+        <button type="button" data-mode="live" aria-pressed="true">Live</button>
+        <button type="button" data-mode="demo" aria-pressed="false">Demo</button>
+      </div>
+      <span class="controls" id="demoCtl" hidden>
+        <button class="btn" id="pauseBtn" type="button">Pause</button>
+        <span class="seg" role="group" aria-label="Simulation speed">
+          <button type="button" data-speed="1" aria-pressed="true">1×</button>
+          <button type="button" data-speed="2" aria-pressed="false">2×</button>
+          <button type="button" data-speed="4" aria-pressed="false">4×</button>
+        </span>
+        <label class="toggle"><input type="checkbox" id="autoGate" checked> Auto-approve gates</label>
+      </span>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <div class="strip" aria-live="polite">
+    <div class="chip"><b id="lProduct">Repo</b><span id="sProduct">ai-agent-company</span></div>
+    <div class="chip" id="sprintChip" hidden><b>Sprint</b><span id="sSprint">1</span></div>
+    <div class="chip phase"><b>Phase</b><span id="sPhase">…</span></div>
+    <div class="chip"><b id="lIssues">Issues</b><span id="sIssues">–</span></div>
+    <div class="chip"><b>Open PRs</b><span id="sPRs">–</span></div>
+    <div class="chip"><b>Gates</b><span id="sGates">–</span></div>
+    <div class="chip"><b id="lClock">Synced</b><span id="sClock">–</span></div>
+  </div>
+
+  <div class="floor" id="floor"></div>
+
+  <div class="lower">
+    <section class="panel-box">
+      <h3>Activity log</h3>
+      <ul id="log"></ul>
+    </section>
+    <section class="panel-box">
+      <h3>Agent card</h3>
+      <div class="detail" id="detail"></div>
+      <p class="note" style="margin-top:10px">Click any robot to see its card.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+const ROOMS = [
+  {id:'ceo',     label:'CEO Office',       code:'R-00 · gates'},
+  {id:'product', label:'Product Studio',   code:'R-01'},
+  {id:'design',  label:'Architecture Lab', code:'R-02'},
+  {id:'tower',   label:'Control Tower',    code:'R-03'},
+  {id:'eng',     label:'Engineering Bay',  code:'R-04'},
+  {id:'ops',     label:'Ops Control',      code:'R-05'},
+  {id:'quality', label:'Quality Lab',      code:'R-06'},
+  {id:'docs',    label:'Docs Library',     code:'R-07'},
+];
+const BOTS = {
+  ceo:   {name:'You',       role:'CEO / Product Owner',  dept:'ceo',     file:'human · approves gates', model:'human'},
+  orch:  {name:'Conductor', role:'Orchestrator',         dept:'tower',   file:'.claude/skills/orchestrator', model:'main'},
+  pm:    {name:'Prism',     role:'Product Manager',      dept:'product', file:'.claude/agents/product-manager.md', model:'sonnet'},
+  ux:    {name:'Pixel',     role:'UX / UI Designer',     dept:'product', file:'.claude/agents/ux-designer.md', model:'sonnet'},
+  arch:  {name:'Atlas',     role:'Architect',            dept:'design',  file:'.claude/agents/architect.md', model:'opus'},
+  lead:  {name:'Torque',    role:'Tech Lead',            dept:'design',  file:'.claude/agents/tech-lead.md', model:'opus'},
+  be:    {name:'Bolt',      role:'Backend Developer',    dept:'eng',     file:'.claude/agents/backend-developer.md', model:'sonnet'},
+  fe:    {name:'Flux',      role:'Frontend Developer',   dept:'eng',     file:'.claude/agents/frontend-developer.md', model:'sonnet'},
+  qa:    {name:'Probe',     role:'QA Engineer',          dept:'quality', file:'.claude/agents/qa-engineer.md', model:'sonnet'},
+  rev:   {name:'Lens',      role:'Code Reviewer',        dept:'quality', file:'.claude/agents/code-reviewer.md', model:'opus'},
+  sec:   {name:'Aegis',     role:'Security Engineer',    dept:'quality', file:'.claude/agents/security-engineer.md', model:'opus'},
+  devops:{name:'Piston',    role:'DevOps Engineer',      dept:'ops',     file:'.claude/agents/devops-engineer.md', model:'sonnet'},
+  sre:   {name:'Pulse',     role:'SRE',                  dept:'ops',     file:'.claude/agents/sre.md', model:'sonnet'},
+  docs:  {name:'Scribe',    role:'Tech Writer',          dept:'docs',    file:'.claude/agents/tech-writer.md', model:'haiku'},
+};
+const PRODUCTS = ['To-do app with login','Habit tracker','Invoice generator','Team standup board'];
+
+function botSVG(){
+  return `<svg class="bot" viewBox="0 0 64 74" aria-hidden="true"><g class="rig">
+    <line x1="32" y1="3" x2="32" y2="12" stroke="var(--enamel)" stroke-width="2"/>
+    <circle class="led" cx="32" cy="4" r="3.4"/>
+    <rect class="shade" x="9" y="20" width="5" height="9" rx="2"/><rect class="shade" x="50" y="20" width="5" height="9" rx="2"/>
+    <rect class="shell" x="13" y="11" width="38" height="26" rx="9"/>
+    <rect class="visor" x="18" y="17" width="28" height="13" rx="6.5"/>
+    <circle class="eye" cx="26" cy="23.5" r="2.8"/><circle class="eye" cx="38" cy="23.5" r="2.8"/>
+    <rect class="shade" x="28" y="37" width="8" height="4"/>
+    <rect class="arm l shade" x="6" y="43" width="8" height="22" rx="4"/>
+    <rect class="arm r shade" x="50" y="43" width="8" height="22" rx="4"/>
+    <rect class="shell" x="14" y="40" width="36" height="30" rx="7"/>
+    <rect class="panel" x="23" y="46" width="18" height="9" rx="2"/>
+    <circle class="px" cx="27.5" cy="50.5" r="1.6"/><circle class="px" cx="32" cy="50.5" r="1.6"/><circle class="px" cx="36.5" cy="50.5" r="1.6"/>
+  </g></svg>`;
+}
+function humanSVG(){
+  return `<svg class="bot" viewBox="0 0 64 74" aria-hidden="true"><g class="rig">
+    <circle class="led" cx="52" cy="6" r="0"/>
+    <rect x="15" y="40" width="34" height="32" rx="10" fill="#34506f"/>
+    <path d="M28 40 L32 56 L36 40 Z" fill="#e6ecf1"/><path d="M31 44 L33 44 L34 54 L32 58 L30 54 Z" fill="#f2b632"/>
+    <rect class="arm l" x="8" y="44" width="8" height="22" rx="4" fill="#2b4460"/>
+    <rect class="arm r" x="48" y="44" width="8" height="22" rx="4" fill="#2b4460"/>
+    <rect x="28" y="33" width="8" height="8" fill="#c99470"/>
+    <circle cx="32" cy="22" r="12" fill="#d6a47e"/>
+    <path d="M20 21 C20 9 44 9 44 21 C41 15 25 15 20 21 Z" fill="#2a2420"/>
+    <circle cx="27.5" cy="23" r="1.6" fill="#1b1b1b"/><circle cx="36.5" cy="23" r="1.6" fill="#1b1b1b"/>
+    <path d="M28 28 Q32 31 36 28" stroke="#7a4a35" stroke-width="1.4" fill="none"/>
+  </g></svg>`;
+}
+
+const floor = document.getElementById('floor');
+const desks = {};
+ROOMS.forEach(r=>{
+  const room = document.createElement('section');
+  room.className = 'room ' + r.id;
+  room.style.gridArea = r.id;
+  room.innerHTML = `<div class="sign"><h2>${r.label}</h2><small>${r.code}</small></div><div class="desks"></div>`;
+  if(r.id==='tower') room.insertAdjacentHTML('beforeend','<div class="radar" aria-hidden="true"></div>');
+  floor.appendChild(room);
+  const holder = room.querySelector('.desks');
+  Object.entries(BOTS).filter(([,b])=>b.dept===r.id).forEach(([id,b],i)=>{
+    const d = document.createElement('div');
+    d.className='desk'; d.tabIndex=0; d.dataset.id=id; d.dataset.state='idle';
+    d.setAttribute('role','button'); d.setAttribute('aria-label',`${b.name}, ${b.role}`);
+    d.style.setProperty('--enamel',`var(--en-${b.dept})`);
+    d.style.setProperty('--d',`${(Object.keys(BOTS).indexOf(id)*0.37)%2.5}s`);
+    d.innerHTML = `<div class="bubble">${id==='orch'?'Watching the board':id==='ceo'?'Ready to review':'Idle · waiting for work'}</div>
+      <div class="station">${id==='ceo'?humanSVG():botSVG()}<div class="monitor"><i></i><i></i><i></i></div><div class="table"></div></div>
+      <div class="nameplate"><span class="dot"></span>${b.name}<span class="model">${b.model}</span></div>
+      <div class="role">${b.role}</div>`;
+    b.tasks = 0; b.current = 'Idle';
+    d.addEventListener('click',()=>select(id));
+    d.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); select(id);} });
+    holder.appendChild(d);
+    desks[id]=d;
+  });
+  if(r.id==='ceo'){
+    room.querySelector('.desks').insertAdjacentHTML('beforeend',`<div class="gates">
+      <div class="lamps">${[1,2,3,4].map(n=>`<div class="lamp" id="lamp${n}" data-s="off"><i></i>G${n}</div>`).join('')}</div>
+      <button class="btn" id="approveBtn" type="button" disabled>No gate pending</button><div id="gateLink"></div></div>`);
+  }
+});
+
+/* ---------- state + helpers ---------- */
+let speed = 1, paused = false, selected = 'orch', pendingGate = null, mode = 'live', gen = 0;
+const stats = {sprint:0, issues:0, total:0, prs:0, gates:0, minutes:9*60};
+const $ = id => document.getElementById(id);
+const clockStr = () => `${String(Math.floor(stats.minutes/60)%24).padStart(2,'0')}:${String(Math.floor(stats.minutes%60)).padStart(2,'0')}`;
+function renderStats(){
+  if(mode!=='demo') return;
+  $('sSprint').textContent = stats.sprint;
+  $('sIssues').textContent = `${stats.issues} / ${stats.total}`;
+  $('sPRs').textContent = stats.prs;
+  $('sGates').textContent = `${stats.gates} / 4`;
+  $('sClock').textContent = clockStr();
+}
+function phase(t){ $('sPhase').textContent = t; setBot('orch','working',`Phase: ${t}`, true); }
+
+function wait(ms){
+  return new Promise(res=>{
+    let left = ms, last = performance.now();
+    const g = gen;
+    function tick(now){
+      if(g!==gen) return; // mode switched: abandon this timeline
+      const dt = now-last; last = now;
+      if(!paused){ left -= dt*speed; stats.minutes += dt*speed/420; }
+      if(left<=0){ renderStats(); res(); } else { if(Math.random()<.1) renderStats(); requestAnimationFrame(tick); }
+    }
+    requestAnimationFrame(tick);
+  });
+}
+function setBot(id,state,text,quiet){
+  const d = desks[id]; d.dataset.state = state;
+  d.querySelector('.bubble').textContent = text;
+  BOTS[id].current = text;
+  if(selected===id) renderDetail();
+}
+function log(id,msg,cls,at){
+  const li = document.createElement('li'); if(cls) li.className = cls;
+  li.style.setProperty('--c',`var(--en-${BOTS[id].dept})`);
+  li.innerHTML = `<time>${at||clockStr()}</time><span class="who">${BOTS[id].name}</span><span class="msg"></span>`;
+  li.querySelector('.msg').textContent = msg;
+  const ul = $('log'); ul.prepend(li);
+  while(ul.children.length>60) ul.lastChild.remove();
+}
+async function work(id,text,ms,result){
+  setBot(id,'working',text);
+  await wait(ms);
+  BOTS[id].tasks++;
+  setBot(id,'done',result);
+  log(id,result);
+  (async()=>{ await wait(2600); if(desks[id].dataset.state==='done') setBot(id,'idle',result); })();
+}
+function center(id){
+  const f = floor.getBoundingClientRect(), r = desks[id].querySelector('.station').getBoundingClientRect();
+  return {x: r.left - f.left + r.width/2, y: r.top - f.top + 10};
+}
+async function fly(from,to,label){
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const a = center(from), b = center(to);
+  const dr = document.createElement('div'); dr.className='drone';
+  dr.innerHTML = `<svg viewBox="0 0 38 16" aria-hidden="true"><ellipse class="rotor" cx="6" cy="3" rx="6" ry="1.5"/><ellipse class="rotor" cx="32" cy="3" rx="6" ry="1.5"/><rect class="frame" x="5" y="4" width="2" height="5"/><rect class="frame" x="31" y="4" width="2" height="5"/><rect class="frame" x="5" y="8" width="28" height="5" rx="2.5"/></svg><span class="tag"></span>`;
+  dr.querySelector('.tag').textContent = label;
+  const dist = Math.hypot(b.x-a.x,b.y-a.y), dur = Math.max(700, Math.min(1800, dist*2.2));
+  dr.style.left = a.x+'px'; dr.style.top = a.y+'px';
+  floor.appendChild(dr);
+  dr.getBoundingClientRect();
+  dr.style.transitionDuration = reduce ? '0ms' : (dur/speed)+'ms';
+  dr.style.left = b.x+'px'; dr.style.top = b.y+'px';
+  await wait(dur);
+  dr.remove();
+}
+function lamp(n,s){ $('lamp'+n).dataset.s = s; }
+async function gate(n,title){
+  lamp(n,'wait');
+  setBot('ceo','waiting',`Gate ${n}: ${title}?`);
+  log('ceo',`⛔ Gate ${n} waiting: ${title}`,'gate');
+  const btn = $('approveBtn');
+  await new Promise(resolve=>{
+    pendingGate = {n,resolve};
+    btn.disabled = false;
+    (async()=>{
+      let t = 5;
+      while(pendingGate && pendingGate.n===n){
+        btn.textContent = $('autoGate').checked ? `Approve gate ${n} (auto ${t}s)` : `Approve gate ${n}`;
+        await wait(1000);
+        if(!pendingGate || pendingGate.n!==n) break;
+        if($('autoGate').checked){ if(--t<=0){ approve(); break; } } else t = 5;
+      }
+    })();
+  });
+}
+function approve(){
+  if(!pendingGate) return;
+  const g = pendingGate; pendingGate = null;
+  lamp(g.n,'ok'); stats.gates++; renderStats();
+  const btn = $('approveBtn'); btn.disabled = true; btn.textContent = 'No gate pending';
+  setBot('ceo','done',`Gate ${g.n} approved`);
+  log('ceo',`✓ Gate ${g.n} approved`,'gate');
+  g.resolve();
+}
+$('approveBtn').addEventListener('click',approve);
+
+/* ---------- detail card ---------- */
+function select(id){
+  if(desks[selected]) desks[selected].classList.remove('selected');
+  selected = id; desks[id].classList.add('selected'); renderDetail();
+}
+function renderDetail(){
+  const b = BOTS[selected], st = desks[selected].dataset.state;
+  const label = {idle:'Idle',working:'Working',waiting:'Waiting on CEO',done:'Just finished'}[st];
+  $('detail').innerHTML = `<div class="big" style="--enamel:var(--en-${b.dept})">${selected==='ceo'?humanSVG():botSVG()}</div>
+    <div style="min-width:0"><h4>${b.name}</h4><dl>
+      <dt>Role</dt><dd>${b.role}</dd>
+      <dt>Defined in</dt><dd>${b.file}</dd>
+      <dt>Model</dt><dd>${b.model}</dd>
+      <dt>Status</dt><dd>${label}</dd>
+      <dt>Now</dt><dd></dd>
+      <dt>Tasks done</dt><dd>${b.tasks}</dd></dl></div>`;
+  $('detail').querySelectorAll('dd')[4].textContent = b.current;
+}
+select('orch');
+
+/* ---------- controls ---------- */
+$('pauseBtn').addEventListener('click',()=>{
+  paused = !paused; document.body.classList.toggle('paused',paused);
+  $('pauseBtn').textContent = paused ? 'Resume' : 'Pause';
+});
+document.querySelectorAll('[data-speed]').forEach(b=>b.addEventListener('click',()=>{
+  speed = +b.dataset.speed;
+  document.querySelectorAll('[data-speed]').forEach(x=>x.setAttribute('aria-pressed', x===b ? 'true':'false'));
+}));
+
+/* ---------- the sprint script (mirrors docs/WORKFLOW.md) ---------- */
+async function build(id,issue,title){
+  await fly('lead',id,issue);
+  await work(id,`${issue} ${title}`,3400+Math.random()*1600,`${issue} done · PR opened`);
+  stats.prs++; renderStats();
+}
+async function sprint(){
+  stats.sprint++; stats.issues = 0; stats.total = 0; stats.prs = 0; stats.gates = 0;
+  const product = PRODUCTS[(stats.sprint-1)%PRODUCTS.length];
+  $('sProduct').textContent = product;
+  [1,2,3,4].forEach(n=>lamp(n,'off'));
+  renderStats();
+
+  phase('Intake');
+  setBot('ceo','working',`New idea: ${product}`);
+  log('ceo',`New product idea: ${product}`);
+  await wait(900);
+  setBot('ceo','idle','Idea sent to Conductor');
+  await fly('ceo','orch','idea');
+  await work('orch','Routing idea to Product',1100,'Delegated PRD to Prism');
+  await fly('orch','pm','brief');
+
+  phase('1 · Product');
+  await work('pm','Writing docs/PRD.md',3600,'PRD: 6 stories, 18 criteria');
+  await fly('pm','ceo','PRD');
+  await gate(1,'Approve scope');
+
+  phase('2 · Design');
+  await Promise.all([fly('orch','ux','PRD'), fly('orch','arch','PRD')]);
+  await Promise.all([
+    work('ux','Wireframing 4 screens + copy',3200,'docs/ux.md: 4 screens'),
+    work('arch','Comparing free-tier stacks, ADR-0001',4000,'Stack picked, $0/mo hosting'),
+  ]);
+  await fly('arch','ceo','design');
+  await gate(2,'Approve design');
+
+  phase('3 · Planning');
+  await fly('arch','lead','ADRs');
+  await work('lead','Creating issues #1–#8',2800,'8 issues · 3 parallel lanes');
+  stats.total = 8; renderStats();
+
+  phase('4 · Build');
+  await Promise.all([
+    build('devops','#1','Scaffold + CI pipeline'),
+    build('be','#3','Auth API + unit tests'),
+    build('fe','#5','Login screen'),
+  ]);
+
+  phase('5 · Review');
+  await Promise.all([
+    (async()=>{
+      await fly('be','rev','PR #9');
+      await work('rev','Reviewing PR #9 (auth)',2600,'Changes requested: validate email');
+      await fly('rev','be','fix');
+      await work('be','Fixing review, cycle 2/3',2200,'Fix pushed to PR #9');
+      await fly('be','rev','PR #9');
+      await work('rev','Re-reviewing PR #9',1600,'PR #9 approved');
+    })(),
+    (async()=>{
+      await fly('fe','qa','PR #10');
+      await work('qa','E2E tests on PR #10',3400,'PR #10: 14/14 checks pass');
+    })(),
+    (async()=>{
+      await fly('be','sec','PR #9');
+      await work('sec','Auth + dependency scan',3000,'0 high · 1 low filed as #11');
+    })(),
+    (async()=>{
+      await fly('devops','rev','PR #8');
+      await wait(2800);
+    })(),
+  ]);
+  await fly('rev','ceo','3 PRs');
+  await gate(3,'Merge 3 PRs');
+  stats.issues = 3; stats.prs = 0; renderStats();
+
+  phase('6 · Release');
+  await Promise.all([
+    (async()=>{ await fly('ceo','devops','merged'); await work('devops','Deploying to staging',3000,'Staging deploy is green'); })(),
+    (async()=>{ await fly('orch','docs','PRs'); await work('docs','Updating CHANGELOG.md',2600,'v0.' + stats.sprint + '.0 notes ready'); })(),
+  ]);
+  await fly('devops','ceo','staging');
+  await gate(4,'Release to production');
+  await fly('ceo','devops','go');
+  await work('devops','Promoting to production',2000,'Live in production');
+
+  phase('Monitor + plan');
+  await Promise.all([
+    (async()=>{ await fly('devops','sre','release'); await work('sre','Health checks + error watch',2600,'200 OK · p95 182 ms'); })(),
+    work('pm','Planning next sprint',2800,'5 issues groomed for next sprint'),
+  ]);
+  setBot('orch','done',`Sprint ${stats.sprint} closed`);
+  log('orch',`Sprint ${stats.sprint} closed: ${product} shipped`);
+  await wait(2200);
+}
+/* ---------- live mode: GitHub snapshot from the page database ---------- */
+let liveSnap = null, liveStatus = 'connecting', seenEvents = null;
+const RANK = {idle:0, done:1, working:2, waiting:3};
+const hhmm = iso => { const d = new Date(iso); return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; };
+function ago(iso){
+  const m = Math.round((Date.now() - new Date(iso)) / 60000);
+  if(m < 1) return 'just now';
+  if(m < 60) return `${m} min ago`;
+  if(m < 48*60) return `${Math.round(m/60)} h ago`;
+  return `${Math.round(m/1440)} d ago`;
+}
+function link(href, text){ const a = document.createElement('a'); a.href = href; a.target = '_blank'; a.rel = 'noopener'; a.textContent = text; return a; }
+function banner(parts){
+  const B = $('banner'); B.replaceChildren(); B.hidden = !parts;
+  if(parts) parts.forEach(p => B.append(p));
+}
+function demoButton(){ const b = document.createElement('button'); b.className = 'btn'; b.type = 'button'; b.textContent = 'Watch the demo'; b.onclick = () => setMode('demo'); return b; }
+
+function resetFloor(){
+  floor.querySelectorAll('.drone').forEach(d => d.remove());
+  Object.keys(BOTS).forEach(id => setBot(id, 'idle', id==='orch' ? 'Watching the board' : 'Idle'));
+  [1,2,3,4].forEach(n => lamp(n,'off'));
+  pendingGate = null;
+  const btn = $('approveBtn'); btn.disabled = true; btn.textContent = 'No gate pending';
+  $('gateLink').replaceChildren();
+  $('log').replaceChildren();
+}
+function setMode(m){
+  mode = m; gen++; paused = false;
+  document.body.classList.remove('paused'); $('pauseBtn').textContent = 'Pause';
+  document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode===m ? 'true' : 'false'));
+  $('demoCtl').hidden = m !== 'demo';
+  $('sprintChip').hidden = m !== 'demo';
+  $('approveBtn').hidden = m !== 'demo';
+  $('gateLink').hidden = m === 'demo';
+  $('sClock').parentElement.classList.remove('stale');
+  resetFloor();
+  if(m === 'demo'){
+    banner(null);
+    $('modeNote').textContent = 'demo: a simulated sprint with sample work';
+    $('lProduct').textContent = 'Product'; $('lIssues').textContent = 'Issues done'; $('lClock').textContent = 'Clock';
+    stats.sprint = 0; stats.minutes = 9*60;
+    const g = gen;
+    (async()=>{ while(g === gen) await sprint(); })();
+  } else {
+    $('lProduct').textContent = 'Repo'; $('lIssues').textContent = 'Open issues'; $('lClock').textContent = 'Synced';
+    seenEvents = null;
+    renderLive();
+  }
+}
+document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { if(b.dataset.mode !== mode) setMode(b.dataset.mode); }));
+
+function renderLive(){
+  const s = liveSnap;
+  if(liveStatus !== 'ok' || !s){
+    const msg = {
+      connecting: 'Connecting to the HQ database…',
+      unavailable: 'Live GitHub data is not available in this view. Open the page signed in to claude.ai to see it.',
+      empty: 'No GitHub snapshot yet. In Claude Code, ask Claude to "sync HQ" to load your repo.',
+      error: 'The HQ database could not be read right now. Reload to try again.',
+    }[liveStatus] || 'Waiting for data…';
+    banner(liveStatus === 'connecting' ? [msg] : [msg, demoButton()]);
+    $('modeNote').textContent = liveStatus === 'connecting' ? 'connecting to GitHub data…' : 'live data unavailable';
+    ['sPhase','sIssues','sPRs','sGates','sClock'].forEach(id => $(id).textContent = '–');
+    return;
+  }
+  const issues = s.issues || [], prs = s.prs || [], docs = s.docs || {}, events = s.events || [];
+  const has = (x,l) => (x.labels||[]).includes(l);
+  const open = issues.filter(i => i.state === 'OPEN');
+  const closed = issues.filter(i => i.state === 'CLOSED');
+  const openPRs = prs.filter(p => p.state === 'OPEN');
+  const inProg = open.filter(i => has(i,'status:in-progress'));
+  const ready = open.filter(i => has(i,'status:ready'));
+  const needsCeo = [...open, ...openPRs].filter(x => has(x,'needs-ceo'));
+  const approved = openPRs.filter(p => p.reviewDecision === 'APPROVED');
+  const changes = openPRs.filter(p => p.reviewDecision === 'CHANGES_REQUESTED');
+  const toReview = openPRs.filter(p => !p.isDraft && !['APPROVED','CHANGES_REQUESTED'].includes(p.reviewDecision));
+  const failing = openPRs.filter(p => p.checks === 'fail'), pending = openPRs.filter(p => p.checks === 'pending');
+  const merged = prs.filter(p => p.state === 'MERGED');
+  const rel = s.release;
+  const unreleased = merged.filter(p => !rel || (p.mergedAt && p.mergedAt > rel.at));
+  const bugs = open.filter(i => has(i,'type:bug'));
+  const more = arr => arr.length > 1 ? ` (+${arr.length-1} more)` : '';
+
+  const st = {};
+  const put = (id, state, text) => { if(id && BOTS[id] && (!st[id] || RANK[state] > RANK[st[id][0]])) st[id] = [state, text]; };
+  // Work that is actually in flight
+  inProg.forEach(i => put(i.role, 'working', `#${i.number} ${i.title}`));
+  changes.forEach(p => put(p.role, 'working', `Fixing review on PR #${p.number}`));
+  openPRs.filter(p => p.isDraft).forEach(p => put(p.role, 'working', `Draft PR #${p.number}: ${p.title}`));
+  if(toReview.length) put('rev', 'working', `Reviewing PR #${toReview[0].number}${more(toReview)}`);
+  if(failing.length) put('qa', 'waiting', `Checks failing on PR #${failing[0].number}${more(failing)}`);
+  else if(pending.length) put('qa', 'working', `Checks running on PR #${pending[0].number}`);
+  // Documents and gates
+  const docLine = {missing:'not written yet', template:'not written yet', draft:'draft ready', approved:'approved'};
+  put('pm', docs.prd === 'draft' ? 'waiting' : docs.prd === 'approved' ? 'done' : 'idle', `PRD ${docLine[docs.prd] || 'unknown'}`);
+  put('ux', docs.ux === 'draft' || docs.ux === 'approved' ? 'done' : 'idle', docs.ux === 'draft' || docs.ux === 'approved' ? 'docs/ux.md written' : 'No UX spec yet');
+  put('arch', docs.architecture === 'draft' ? 'waiting' : docs.architecture === 'approved' ? 'done' : 'idle', `Architecture ${docLine[docs.architecture] || 'unknown'}`);
+  put('lead', 'idle', ready.length ? `${ready.length} issue(s) ready to build` : docs.architecture === 'approved' ? 'Ready to plan issues' : 'Waiting for approved design');
+  put('devops', 'idle', unreleased.length ? `${unreleased.length} merged PR(s) not released` : rel ? `Latest release ${rel.tag}` : 'No release yet');
+  put('sre', bugs.length ? 'waiting' : 'idle', bugs.length ? `${bugs.length} open bug(s)` : 'All quiet');
+  const secOpen = open.filter(i => i.role === 'sec');
+  put('sec', 'idle', secOpen.length ? `${secOpen.length} security issue(s) open` : 'No open findings');
+  put('rev', 'idle', 'No PRs to review');
+  put('qa', 'idle', 'No checks running');
+  ['be','fe','docs'].forEach(id => put(id, 'idle', 'No assigned work'));
+
+  let gateTarget = null;
+  if(needsCeo.length){ put('ceo','waiting',`${needsCeo.length} item(s) need you`); gateTarget = [`${s.url}/${openPRs.includes(needsCeo[0]) ? 'pull' : 'issues'}/${needsCeo[0].number}`, `#${needsCeo[0].number} needs you`]; }
+  if(approved.length){ put('ceo','waiting',`Merge PR #${approved[0].number}${more(approved)}`); gateTarget = gateTarget || [`${s.url}/pull/${approved[0].number}`, `Open PR #${approved[0].number}`]; }
+  if(docs.prd === 'draft'){ put('ceo','waiting','Approve PRD (Gate 1)'); gateTarget = gateTarget || [`${s.url}/blob/main/docs/PRD.md`, 'Read docs/PRD.md']; }
+  if(docs.architecture === 'draft'){ put('ceo','waiting','Approve design (Gate 2)'); gateTarget = gateTarget || [`${s.url}/blob/main/docs/architecture.md`, 'Read architecture.md']; }
+  put('ceo', 'idle', 'Nothing waiting on you');
+
+  // Phase, same rules as the orchestrator skill
+  let ph;
+  if(docs.prd !== 'draft' && docs.prd !== 'approved') ph = '1 · Product: no PRD yet';
+  else if(docs.prd === 'draft') ph = 'Gate 1 · waiting on you';
+  else if(docs.architecture !== 'approved') ph = docs.architecture === 'draft' ? 'Gate 2 · waiting on you' : '2 · Design';
+  else if(approved.length) ph = 'Gate 3 · merge approved PRs';
+  else if(openPRs.length) ph = '5 · Review';
+  else if(inProg.length || ready.length) ph = '4 · Build';
+  else if(unreleased.length) ph = '6 · Release';
+  else if(!issues.length && !merged.length) ph = '3 · Planning';
+  else ph = 'Monitor + plan';
+  put('orch', /Build|Review/.test(ph) ? 'working' : /Gate/.test(ph) ? 'waiting' : 'idle', `Phase: ${ph}`);
+
+  Object.keys(BOTS).forEach(id => setBot(id, st[id][0], st[id][1]));
+
+  const g1 = docs.prd === 'approved' ? 'ok' : docs.prd === 'draft' ? 'wait' : 'off';
+  const g2 = docs.architecture === 'approved' ? 'ok' : docs.architecture === 'draft' ? 'wait' : 'off';
+  const g3 = approved.length ? 'wait' : merged.length ? 'ok' : 'off';
+  const g4 = unreleased.length && merged.length ? 'wait' : rel ? 'ok' : 'off';
+  [g1,g2,g3,g4].forEach((v,i) => lamp(i+1, v));
+  $('gateLink').replaceChildren(...(gateTarget ? [link(gateTarget[0], gateTarget[1] + ' ↗')] : []));
+
+  $('sProduct').textContent = s.repo.split('/').pop();
+  $('repoLink').href = s.url; $('repoLink').textContent = s.repo.split('/').pop();
+  $('sPhase').textContent = ph;
+  $('sIssues').textContent = `${open.length} · ${closed.length} closed (14 d)`;
+  $('sPRs').textContent = openPRs.length;
+  $('sGates').textContent = `${[g1,g2,g3,g4].filter(v => v==='ok').length} / 4`;
+  renderSynced();
+
+  const empty = !issues.length && !prs.length && docs.prd !== 'draft' && docs.prd !== 'approved';
+  if(empty){
+    const c = document.createElement('code'); c.textContent = '/orchestrator new <your idea>';
+    banner(['The repo has no work yet. Start a product with ', c, ' in Claude Code, then ask Claude to "sync HQ".', demoButton()]);
+  } else banner(null);
+  $('modeNote').textContent = 'live from GitHub';
+
+  // Activity log from the repo's real events
+  const ul = $('log'); ul.replaceChildren();
+  events.slice(0, 40).forEach(e => log(BOTS[e.who] ? e.who : 'orch', e.text, null, hhmm(e.at)));
+  if(!events.length){ const li = document.createElement('li'); li.textContent = 'No repo activity yet.'; ul.append(li); }
+  // Order: log() prepends, so flip to newest-first
+  [...ul.children].reverse().forEach(li => ul.append(li));
+
+  // Drones for events we haven't animated yet (first load replays the latest 3)
+  const fresh = seenEvents ? events.filter(e => !seenEvents.has(e.id)) : events.slice(0, 3);
+  seenEvents = new Set(events.map(e => e.id));
+  const g = gen;
+  (async()=>{
+    for(const e of fresh.slice().reverse()){
+      if(g !== gen) return;
+      const route = droneRoute(e);
+      if(route) await fly(route[0], route[1], route[2]);
+    }
+  })();
+}
+function droneRoute(e){
+  const tag = (e.text.match(/(PR )?#\d+/) || [e.type.replace('Event','')])[0];
+  const who = BOTS[e.who] ? e.who : 'orch';
+  if(e.type === 'PullRequestEvent') return / merged/.test(e.text) ? ['ceo','devops',tag] : / opened/.test(e.text) ? [who,'rev',tag] : [who,'orch',tag];
+  if(e.type === 'IssuesEvent') return / opened/.test(e.text) ? ['lead', who === 'lead' ? 'orch' : who, tag] : [who,'orch',tag];
+  if(e.type === 'PullRequestReviewEvent') return ['rev','orch',tag];
+  if(e.type === 'PushEvent') return who === 'orch' ? null : [who,'orch','push'];
+  if(e.type === 'ReleaseEvent') return ['devops','sre','release'];
+  return null;
+}
+function renderSynced(){
+  if(mode !== 'live' || !liveSnap) return;
+  const iso = liveSnap.generatedAt;
+  $('sClock').textContent = ago(iso);
+  $('sClock').parentElement.classList.toggle('stale', Date.now() - new Date(iso) > 2*3600*1000);
+}
+setInterval(renderSynced, 30000);
+
+(async()=>{
+  const db = window.claude && window.claude.use ? await window.claude.use('db') : null;
+  if(!db){ liveStatus = 'unavailable'; if(mode === 'live') renderLive(); return; }
+  db.doc('hq/state').onSnapshot(snap => {
+    liveSnap = snap.exists ? snap.data() : null;
+    liveStatus = liveSnap ? 'ok' : 'empty';
+    if(mode === 'live') renderLive();
+  }, () => { liveStatus = 'error'; if(mode === 'live') renderLive(); });
+})();
+
+setMode('live');
+</script>
