@@ -1,0 +1,14 @@
+.next
+node_modules
+coverage
+playwright-report
+test-results
+pnpm-lock.yaml
+drizzle
+office
+.claude
+docs
+next-env.d.ts
+.github
+CLAUDE.md
+README.md
