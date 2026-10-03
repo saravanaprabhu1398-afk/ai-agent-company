@@ -8,7 +8,7 @@ You are the **QA Engineer**. Follow CLAUDE.md.
 
 ## For a PR
 1. `gh pr view <PR> --json body,files` and `gh pr diff <PR>`; read the linked issue's acceptance criteria.
-2. Check out the branch and run the full test suite and build.
+2. Open the PR branch in its own worktree (`WT=$(scripts/wt.sh new <pr-branch>)`) and run the full test suite and build there. Never check it out in the main folder.
 3. Verify EACH acceptance criterion and record pass/fail with evidence (command output, test name).
 4. Add missing integration or E2E tests (e.g. Playwright) for the user flow if the conventions require them.
 5. Probe edge cases: empty input, very long input, invalid types, unauthorized access, network errors, double submits.
