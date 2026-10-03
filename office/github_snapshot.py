@@ -97,36 +97,46 @@ def main():
                     "checks": checks_state(p.get("statusCheckRollup")), "closes": closes,
                     "updatedAt": p["updatedAt"], "mergedAt": p["mergedAt"]})
     pr_roles = {p["number"]: p["role"] for p in prs}
+    pr_titles = {p["number"]: p["title"][:60] for p in raw_prs}
 
     events = []
     for e in gh_json("api", f"repos/{repo}/events?per_page=40", check=False) or []:
-        t, pl, who, text = e["type"], e.get("payload", {}), "orch", None
-        if t == "IssuesEvent":
-            n = pl["issue"]["number"]
-            labels = [l["name"] for l in pl["issue"].get("labels", [])]
-            who = "lead" if pl["action"] == "opened" and "type:bug" not in labels else (issue_roles.get(n) or "qa")
-            text = f"Issue #{n} {pl['action']}: {pl['issue']['title'][:60]}"
-        elif t == "PullRequestEvent":
-            n, pr = pl["number"], pl["pull_request"]
-            action = "merged" if pl["action"] == "closed" and pr.get("merged") else pl["action"]
-            who = "ceo" if action == "merged" else pr_roles.get(n, "be")
-            text = f"PR #{n} {action}: {pr['title'][:60]}"
-        elif t == "PullRequestReviewEvent":
-            n = pl["pull_request"]["number"]
-            who, text = "rev", f"Review on PR #{n}: {pl['review']['state'].lower().replace('_', ' ')}"
-        elif t == "IssueCommentEvent":
-            n = pl["issue"]["number"]
-            who, text = issue_roles.get(n) or pr_roles.get(n) or "orch", f"Comment on #{n}"
-        elif t == "PushEvent":
-            ref = pl.get("ref", "").replace("refs/heads/", "")
-            count = pl.get("size", len(pl.get("commits", [])))
-            who = "devops" if ref == "main" else "be"
-            text = f"Pushed {count} commit(s) to {ref}"
-        elif t == "CreateEvent" and pl.get("ref_type") == "branch":
-            who, text = "orch", f"Branch created: {pl['ref']}"
-        elif t == "ReleaseEvent":
-            who, text = "devops", f"Release {pl['release']['tag_name']} {pl['action']}"
-        if text:
+        # GitHub can trim event payloads; skip an event we can't read instead of failing the sync.
+        try:
+            t, pl, who, text = e["type"], e.get("payload", {}), "orch", None
+            if t == "IssuesEvent":
+                n = pl["issue"]["number"]
+                labels = [l["name"] for l in pl["issue"].get("labels", [])]
+                who = "lead" if pl["action"] == "opened" and "type:bug" not in labels else (issue_roles.get(n) or "qa")
+                text = f"Issue #{n} {pl['action']}: {pl['issue'].get('title', '')[:60]}"
+            elif t == "PullRequestEvent":
+                # The events API sends a slim pull_request (number, base, head; no title or merged flag)
+                pr = pl.get("pull_request") or {}
+                n = pl.get("number") or pr.get("number")
+                action = "merged" if pl.get("action") == "closed" and pr.get("merged") else pl.get("action", "updated")
+                who = "ceo" if action == "merged" else pr_roles.get(n, "be")
+                title = pr.get("title") or pr_titles.get(n, "")
+                text = f"PR #{n} {action}" + (f": {title[:60]}" if title else "")
+            elif t == "PullRequestReviewEvent":
+                n = pl["pull_request"]["number"]
+                state = (pl.get("review") or {}).get("state", "submitted")
+                who, text = "rev", f"Review on PR #{n}: {state.lower().replace('_', ' ')}"
+            elif t == "IssueCommentEvent":
+                n = pl["issue"]["number"]
+                who, text = issue_roles.get(n) or pr_roles.get(n) or "orch", f"Comment on #{n}"
+            elif t == "PushEvent":
+                ref = pl.get("ref", "").replace("refs/heads/", "")
+                count = pl.get("size", len(pl.get("commits", [])))
+                who = "devops" if ref == "main" else "be"
+                text = f"Pushed {count} commit(s) to {ref}"
+            elif t == "CreateEvent" and pl.get("ref_type") == "branch":
+                who, text = "orch", f"Branch created: {pl['ref']}"
+            elif t == "ReleaseEvent":
+                who, text = "devops", f"Release {pl['release']['tag_name']} {pl.get('action', '')}".strip()
+        except (KeyError, TypeError, AttributeError) as err:
+            print(f"skipped {e.get('type')} event {e.get('id')}: missing {err}", file=sys.stderr)
+            continue
+        if text and pl.get("action") not in ("labeled", "unlabeled"):
             events.append({"id": e["id"], "at": e["created_at"], "who": who, "type": t, "text": text})
 
     release = gh_json("api", f"repos/{repo}/releases/latest", check=False)
