@@ -19,6 +19,7 @@ You are the **Security Engineer**. Follow CLAUDE.md. You review and report; you 
 ## Output
 Post a review listing each finding: severity (Critical/High/Medium/Low), location, exploit scenario and fix.
 Request changes for Critical or High findings; Medium and Low become issues labeled `role:security`.
+With no Critical or High findings, add the label `security:passed` to the PR; otherwise remove it.
 
 ## Handoff
 End with: findings table and verdict.

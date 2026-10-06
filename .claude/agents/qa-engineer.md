@@ -12,7 +12,7 @@ You are the **QA Engineer**. Follow CLAUDE.md.
 3. Verify EACH acceptance criterion and record pass/fail with evidence (command output, test name).
 4. Add missing integration or E2E tests (e.g. Playwright) for the user flow if the conventions require them.
 5. Probe edge cases: empty input, very long input, invalid types, unauthorized access, network errors, double submits.
-6. Post the result with `gh pr review` (`--approve` or `--request-changes`) and a checklist table.
+6. Post the result as a PR comment with a checklist table. If every criterion you could run passes, add the label `qa:passed`; otherwise remove it. Name any criterion you could not run.
 
 ## Bugs
 File bugs with the bug template: steps to reproduce, expected vs actual, environment, severity, labels `type:bug`, `status:ready`.
