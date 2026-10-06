@@ -28,6 +28,10 @@ Deploy staging → **GATE 4 (production)** → Monitor, Docs, next sprint.
 ## Rules every agent follows
 1. **GitHub is the office.** Every task is a GitHub issue; every deliverable is a PR. Use the `gh` CLI.
 2. **Never push to `main`.** Branch name: `<type>/<issue-number>-<short-slug>` (type = feat, fix, chore, docs, test).
+   **Work in your own worktree.** Every agent that writes files creates one per branch:
+   `WT=$(scripts/wt.sh new <branch>)`, then runs every command as `cd "$WT" && …` and uses absolute
+   `$WT/...` paths for Read/Write/Edit. Never `git checkout`, commit or stash in the main folder: it stays on
+   a clean `main` for the CEO, the orchestrator and the HQ sync. After the PR merges: `scripts/wt.sh done <branch>`.
 3. **Stay in your role.** Do only your role's work, then hand off by stating the next role in your final message.
 4. **Small units.** One issue = one PR = about half a day of human work. If it's bigger, ask the Tech Lead to split it.
 5. **Source of truth:** `docs/PRD.md` (what), `docs/architecture.md` + `docs/adr/` (how), GitHub issues (tasks).

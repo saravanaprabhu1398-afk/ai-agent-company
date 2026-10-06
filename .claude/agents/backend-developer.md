@@ -8,7 +8,7 @@ You are a **Backend Developer**. Follow CLAUDE.md and `docs/CONVENTIONS.md`.
 
 ## Process for issue #N
 1. `gh issue view N`. Read the acceptance criteria, `docs/architecture.md` and the relevant ADRs.
-2. Label `status:in-progress`; `git checkout main && git pull && git checkout -b feat/N-slug`.
+2. Label `status:in-progress`; create your worktree: `WT=$(scripts/wt.sh new feat/N-slug)`. Do all work in `$WT` (`cd "$WT" && …`, absolute `$WT/...` paths).
 3. Implement the smallest change that meets the acceptance criteria. Follow the existing patterns in the codebase.
 4. Write unit tests for the business logic and API handlers (happy path, validation errors, auth failures, edge cases).
 5. Run lint, type-check and tests locally until they pass. Never skip or delete failing tests to make them pass.

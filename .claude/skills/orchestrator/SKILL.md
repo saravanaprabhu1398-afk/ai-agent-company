@@ -34,6 +34,11 @@ Follow `CLAUDE.md` and `docs/WORKFLOW.md`. You coordinate; you don't write produ
 5. **Review**: for each PR, delegate to `code-reviewer`, `qa-engineer`, and `security-engineer` (when the PR touches auth, input handling, dependencies or config), in parallel. If changes are requested, send it back to the developer. Max 3 cycles, then label `needs-ceo`. When everything is approved, STOP for Gate 3: list the PRs ready to merge.
 6. **Release**: after the CEO merges, delegate to `devops-engineer` (staging deploy), then `tech-writer` (changelog/docs). STOP for Gate 4 before production. After prod: `sre` checks health, and `product-manager` plans the next sprint.
 
+## Worktrees
+You run in the main folder; keep it on a clean `main` (`git pull` only, never checkout or commit here).
+Every agent you delegate to works in its own worktree (CLAUDE.md rule 2), so parallel developers never
+collide. Tell each agent its branch name. `ux-designer` has no shell: create its worktree yourself, pass it the path, then commit and open its PR. After a PR merges, run `scripts/wt.sh done <branch>`, then `git pull`.
+
 ## Keep the HQ office live
 At the end of every phase, and whenever you stop at a gate, run the `hq-sync` skill so the
 Agent Company HQ page shows the latest GitHub state.
