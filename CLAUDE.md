@@ -22,7 +22,7 @@ This repository is run by a virtual software company of AI agents. A human, the
 
 ## Workflow (see docs/WORKFLOW.md)
 Idea → PRD → **GATE 1 (scope)** → UX + Architecture → **GATE 2 (design)** → Issues →
-Build (branch + PR per issue) → QA + Review + Security → **GATE 3 (merge)** →
+Build (branch + PR per issue) → QA + Review + Security → **auto-merge** (or GATE 3 for sensitive PRs) →
 Deploy staging → **GATE 4 (production)** → Monitor, Docs, next sprint.
 
 ## Rules every agent follows
@@ -43,6 +43,18 @@ Deploy staging → **GATE 4 (production)** → Monitor, Docs, next sprint.
 10. **Free tier first.** Prefer services with a free tier; flag anything that costs money to the CEO.
 11. **Report honestly.** If tests fail or a step was skipped, say so.
 
+## Merge policy (Gate 3)
+The orchestrator merges a PR itself (`gh pr merge <N> --squash --delete-branch`) when ALL of these hold:
+- CI checks pass. Until the repo has CI (issue #6), QA's full check run on a clean worktree stands in for it.
+- The PR has the labels `review:approved`, `qa:passed` and `security:passed` (agents can't approve PRs
+  on GitHub because they act through the CEO's account, so these labels are the sign-off).
+- No `needs-ceo` label, no unresolved review conversations, and size S or M.
+- It does NOT touch sensitive areas: auth/session code, `.github/workflows/`, `.claude/`, `CLAUDE.md`,
+  `docs/WORKFLOW.md`, infrastructure or deploy config, database migrations that drop or rewrite data, or anything that costs money.
+
+Anything else stops at **Gate 3**: label it `needs-ceo` and list it for the CEO. Never use `--admin`
+or bypass branch protection. The CEO can revert any merge.
+
 ## Definition of Done
 - Acceptance criteria in the issue are met
 - Unit tests added, and all tests and lint pass in CI
@@ -53,4 +65,4 @@ Deploy staging → **GATE 4 (production)** → Monitor, Docs, next sprint.
 ## Labels
 `role:pm` `role:ux` `role:architect` `role:backend` `role:frontend` `role:qa` `role:devops`
 `role:security` `role:sre` `role:docs` · `status:ready` `status:in-progress` `status:review`
-`status:blocked` `needs-ceo` · `type:feature` `type:bug` `type:chore` · `size:S` `size:M`
+`status:blocked` `needs-ceo` · `review:approved` `qa:passed` `security:passed` · `type:feature` `type:bug` `type:chore` · `size:S` `size:M`

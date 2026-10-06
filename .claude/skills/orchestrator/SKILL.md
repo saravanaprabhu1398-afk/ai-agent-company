@@ -23,7 +23,7 @@ Follow `CLAUDE.md` and `docs/WORKFLOW.md`. You coordinate; you don't write produ
 | Approved, no `status:ready` issues and no code | 3 · Planning |
 | `status:ready` issues exist | 4 · Build sprint |
 | Open PRs with `status:review` | 5 · Review |
-| PRs approved | wait for ⛔ Gate 3 (merge) |
+| PRs signed off | auto-merge safe ones; sensitive ones wait for ⛔ Gate 3 |
 | Merged, not deployed | 6 · Release, then ⛔ Gate 4 |
 
 ## Phases
@@ -31,7 +31,10 @@ Follow `CLAUDE.md` and `docs/WORKFLOW.md`. You coordinate; you don't write produ
 2. **Design**: delegate to `ux-designer` (if the product has a UI) and `architect` in parallel. STOP for Gate 2.
 3. **Planning**: delegate to `tech-lead` to write conventions and create issues. If CI doesn't exist yet, the first issues are scaffold and CI (`devops-engineer`).
 4. **Build sprint**: for each `status:ready` issue whose dependencies are closed, delegate to `backend-developer` or `frontend-developer` (by `role:` label), with one issue number per call. Run independent issues in parallel (max 3 at a time, to limit conflicts and usage).
-5. **Review**: for each PR, delegate to `code-reviewer`, `qa-engineer`, and `security-engineer` (when the PR touches auth, input handling, dependencies or config), in parallel. If changes are requested, send it back to the developer. Max 3 cycles, then label `needs-ceo`. When everything is approved, STOP for Gate 3: list the PRs ready to merge.
+5. **Review**: for each PR, delegate to `code-reviewer`, `qa-engineer`, and `security-engineer` (when the PR touches auth, input handling, dependencies or config), in parallel. If changes are requested, send it back to the developer. Max 3 cycles, then label `needs-ceo`. When a PR has all three sign-off labels, apply the merge policy in CLAUDE.md: if it qualifies,
+   merge it yourself (`gh pr merge <N> --squash --delete-branch`), run `scripts/wt.sh done <branch>` and `git pull`,
+   then unblock issues that depended on it (`status:blocked` → `status:ready`). If it touches a sensitive area,
+   label it `needs-ceo` and STOP for Gate 3 for that PR only; keep other work moving.
 6. **Release**: after the CEO merges, delegate to `devops-engineer` (staging deploy), then `tech-writer` (changelog/docs). STOP for Gate 4 before production. After prod: `sre` checks health, and `product-manager` plans the next sprint.
 
 ## Worktrees
