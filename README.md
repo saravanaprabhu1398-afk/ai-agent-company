@@ -50,3 +50,16 @@ You can also call any agent directly, e.g. *"Use the architect agent to compare 
   Model choices in the agent files are `opus` for judgment roles, `sonnet` for builders and `haiku` for docs; change them to suit your plan.
 - **Improve the company**: when an agent makes a repeated mistake, add a rule to `CLAUDE.md` or that agent's file.
 - **Stay the CEO**: read the PRs before you merge. Agents are fast, but you own what ships.
+
+## Local development
+
+Prerequisites: Node.js 22 (`nvm use`), [pnpm](https://pnpm.io) (version pinned in `package.json`), Docker.
+
+```bash
+pnpm install
+cp .env.example .env.local        # then fill in local values (names only are committed)
+docker compose up -d db           # Postgres 17 on localhost:5432 (user/password/db: todo)
+pnpm dev                          # http://localhost:3000, health check at /api/health
+```
+
+Checks that CI runs: `pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build`.
