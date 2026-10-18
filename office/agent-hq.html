@@ -606,9 +606,16 @@ function renderLive(){
   const inProg = open.filter(i => has(i,'status:in-progress'));
   const ready = open.filter(i => has(i,'status:ready'));
   const needsCeo = [...open, ...openPRs].filter(x => has(x,'needs-ceo'));
-  const approved = openPRs.filter(p => p.reviewDecision === 'APPROVED');
+  // Agents sign off with labels (GitHub won't let them approve PRs from the CEO's own account)
+  const SIGNOFFS = ['review:approved','qa:passed','security:passed'];
+  const reviewable = openPRs.filter(p => !p.isDraft);
+  const signedOff = reviewable.filter(p => SIGNOFFS.every(l => has(p,l)));
+  const ceoPRs = openPRs.filter(p => has(p,'needs-ceo'));
+  const autoMerge = signedOff.filter(p => !has(p,'needs-ceo') && !['fail','pending'].includes(p.checks));
   const changes = openPRs.filter(p => p.reviewDecision === 'CHANGES_REQUESTED');
-  const toReview = openPRs.filter(p => !p.isDraft && !['APPROVED','CHANGES_REQUESTED'].includes(p.reviewDecision));
+  const toReview = reviewable.filter(p => !has(p,'review:approved') && p.reviewDecision !== 'CHANGES_REQUESTED');
+  const toQA = reviewable.filter(p => !has(p,'qa:passed'));
+  const toSec = reviewable.filter(p => !has(p,'security:passed'));
   const failing = openPRs.filter(p => p.checks === 'fail'), pending = openPRs.filter(p => p.checks === 'pending');
   const merged = prs.filter(p => p.state === 'MERGED');
   const rel = s.release;
@@ -624,7 +631,10 @@ function renderLive(){
   openPRs.filter(p => p.isDraft).forEach(p => put(p.role, 'working', `Draft PR #${p.number}: ${p.title}`));
   if(toReview.length) put('rev', 'working', `Reviewing PR #${toReview[0].number}${more(toReview)}`);
   if(failing.length) put('qa', 'waiting', `Checks failing on PR #${failing[0].number}${more(failing)}`);
+  else if(toQA.length) put('qa', 'working', `Testing PR #${toQA[0].number}${more(toQA)}`);
   else if(pending.length) put('qa', 'working', `Checks running on PR #${pending[0].number}`);
+  if(toSec.length) put('sec', 'working', `Scanning PR #${toSec[0].number}${more(toSec)}`);
+  if(autoMerge.length) put('orch', 'working', `Auto-merging PR #${autoMerge[0].number}${more(autoMerge)}`);
   // Documents and gates
   const docLine = {missing:'not written yet', template:'not written yet', draft:'draft ready', approved:'approved'};
   put('pm', docs.prd === 'draft' ? 'waiting' : docs.prd === 'approved' ? 'done' : 'idle', `PRD ${docLine[docs.prd] || 'unknown'}`);
@@ -641,7 +651,6 @@ function renderLive(){
 
   let gateTarget = null;
   if(needsCeo.length){ put('ceo','waiting',`${needsCeo.length} item(s) need you`); gateTarget = [`${s.url}/${openPRs.includes(needsCeo[0]) ? 'pull' : 'issues'}/${needsCeo[0].number}`, `#${needsCeo[0].number} needs you`]; }
-  if(approved.length){ put('ceo','waiting',`Merge PR #${approved[0].number}${more(approved)}`); gateTarget = gateTarget || [`${s.url}/pull/${approved[0].number}`, `Open PR #${approved[0].number}`]; }
   if(docs.prd === 'draft'){ put('ceo','waiting','Approve PRD (Gate 1)'); gateTarget = gateTarget || [`${s.url}/blob/main/docs/PRD.md`, 'Read docs/PRD.md']; }
   if(docs.architecture === 'draft'){ put('ceo','waiting','Approve design (Gate 2)'); gateTarget = gateTarget || [`${s.url}/blob/main/docs/architecture.md`, 'Read architecture.md']; }
   put('ceo', 'idle', 'Nothing waiting on you');
@@ -651,19 +660,20 @@ function renderLive(){
   if(docs.prd !== 'draft' && docs.prd !== 'approved') ph = '1 · Product: no PRD yet';
   else if(docs.prd === 'draft') ph = 'Gate 1 · waiting on you';
   else if(docs.architecture !== 'approved') ph = docs.architecture === 'draft' ? 'Gate 2 · waiting on you' : '2 · Design';
-  else if(approved.length) ph = 'Gate 3 · merge approved PRs';
+  else if(ceoPRs.length) ph = 'Gate 3 · sensitive PR waits on you';
+  else if(autoMerge.length) ph = '5 · Auto-merge';
   else if(openPRs.length) ph = '5 · Review';
   else if(inProg.length || ready.length) ph = '4 · Build';
   else if(unreleased.length) ph = '6 · Release';
   else if(!issues.length && !merged.length) ph = '3 · Planning';
   else ph = 'Monitor + plan';
-  put('orch', /Build|Review/.test(ph) ? 'working' : /Gate/.test(ph) ? 'waiting' : 'idle', `Phase: ${ph}`);
+  put('orch', /Build|Review|Auto-merge/.test(ph) ? 'working' : /Gate/.test(ph) ? 'waiting' : 'idle', `Phase: ${ph}`);
 
   Object.keys(BOTS).forEach(id => setBot(id, st[id][0], st[id][1]));
 
   const g1 = docs.prd === 'approved' ? 'ok' : docs.prd === 'draft' ? 'wait' : 'off';
   const g2 = docs.architecture === 'approved' ? 'ok' : docs.architecture === 'draft' ? 'wait' : 'off';
-  const g3 = approved.length ? 'wait' : merged.length ? 'ok' : 'off';
+  const g3 = ceoPRs.length ? 'wait' : merged.length ? 'ok' : 'off';
   const g4 = unreleased.length && merged.length ? 'wait' : rel ? 'ok' : 'off';
   [g1,g2,g3,g4].forEach((v,i) => lamp(i+1, v));
   $('gateLink').replaceChildren(...(gateTarget ? [link(gateTarget[0], gateTarget[1] + ' ↗')] : []));

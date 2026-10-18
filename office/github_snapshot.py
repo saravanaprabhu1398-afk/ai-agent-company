@@ -126,9 +126,10 @@ def main():
                 who, text = issue_roles.get(n) or pr_roles.get(n) or "orch", f"Comment on #{n}"
             elif t == "PushEvent":
                 ref = pl.get("ref", "").replace("refs/heads/", "")
-                count = pl.get("size", len(pl.get("commits", [])))
+                # GitHub no longer sends commit counts in push events; show one only when present
+                count = pl.get("size") or len(pl.get("commits") or [])
                 who = "devops" if ref == "main" else "be"
-                text = f"Pushed {count} commit(s) to {ref}"
+                text = f"Pushed {count} commit(s) to {ref}" if count else f"Pushed to {ref}"
             elif t == "CreateEvent" and pl.get("ref_type") == "branch":
                 who, text = "orch", f"Branch created: {pl['ref']}"
             elif t == "ReleaseEvent":
